@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html id="background">
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <a id='downloadAnchorElem'></a>
+        <canvas id="canvas"></canvas>
+        <script>
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            window.onload = window.onresize = () => {
+                canvas.width = document.documentElement.clientWidth * 0.998;
+                canvas.height = document.documentElement.clientHeight  * 0.995;
+                draw();
+            }
+
+            let map = {
+                entities: [],
+                spawnPoints: []
+            };
+            let mouseX = 0;
+            let mouseY = 0;
+            let startX = 0;
+            let startY = 0;
+
+            let leftMousePressed = false;
+            let fPressed = false;
+            let cPressed = false;
+
+            let oldMouseX = 0;
+            let oldMouseY = 0;
+
+            processEntity = {
+                x: 0,
+                y: 0,
+                width: 0,
+                height: 0,
+                hitbox: {
+                    x: 0,
+                    y: 0,
+                    width: 0,
+                    height: 0
+                }
+            }
+            processSpawnPoint = {
+                x: 0,
+                y: 0
+            }
+
+            canvas.onmousemove = canvas.onmouseover = e => {
+                mouseX = e.offsetX;
+                mouseY = e.offsetY;
+
+                if(leftMousePressed) {
+                    processEntity.width = mouseX - startX;
+                    processEntity.height = mouseY - startY;
+                    processEntity.hitbox.width = mouseX - startX;
+                    processEntity.hitbox.height = mouseY - startY;
+                }
+                if(fPressed) {
+                    for(entity of map.entities) {
+                        entity.x = entity.x + oldMouseX - mouseX;
+                        entity.y = entity.y + oldMouseY - mouseY;
+                        entity.hitbox.x = entity.hitbox.x + oldMouseX - mouseX;
+                        entity.hitbox.y = entity.hitbox.y + oldMouseY - mouseY;
+                    }
+                    for(spawnPoint of map.spawnPoints) {
+                        spawnPoint.x = spawnPoint.x + oldMouseX - mouseX;
+                        spawnPoint.y = spawnPoint.y + oldMouseY - mouseY;
+                    }
+                }
+                oldMouseX = mouseX;
+                oldMouseY = mouseY;
+            }
+            canvas.addEventListener('mousedown', e => {
+                if(e.button === 0) {
+                    leftMousePressed = true;
+                    startX = mouseX;
+                    startY = mouseY;
+                    
+                    processEntity.x = startX;
+                    processEntity.y = startY;
+                    processEntity.hitbox.x = startX;
+                    processEntity.hitbox.y = startY;
+                }
+            });
+            canvas.addEventListener('mouseup', e => {
+                if(e.button === 0) {
+                    leftMousePressed = false;
+                    if (processEntity.width < 0 && processEntity.height < 0) {
+                        processEntity.x = mouseX;
+                        processEntity.y = mouseY;
+                        processEntity.width = Math.abs(processEntity.width);
+                        processEntity.height = Math.abs(processEntity.height);
+                        processEntity.hitbox.x = mouseX;
+                        processEntity.hitbox.y = mouseY;
+                        processEntity.hitbox.width = Math.abs(processEntity.hitbox.width);
+                        processEntity.hitbox.height = Math.abs(processEntity.hitbox.height);
+                    }
+                    if (processEntity.width < 0) {
+                        processEntity.x = mouseX;
+                        processEntity.width = Math.abs(processEntity.width);
+                        processEntity.hitbox.x = mouseX;
+                        processEntity.hitbox.width = Math.abs(processEntity.hitbox.width);
+                    }
+                    if (processEntity.height < 0) {
+                        processEntity.y = mouseY;
+                        processEntity.height = Math.abs(processEntity.height);
+                        processEntity.hitbox.y = mouseY;
+                        processEntity.hitbox.height = Math.abs(processEntity.hitbox.height);
+                    }
+                    if (processEntity.width !== 0 && processEntity.height !== 0) {
+                        map.entities.push(processEntity);
+                    }
+                    processEntity = {
+                        x: 0,
+                        y: 0,
+                        width: 0,
+                        height: 0,
+                        hitbox: {
+                            x: 0,
+                            y: 0,
+                            width: 0,
+                            height: 0
+                        }
+                    }
+                }
+                
+            });
+            document.addEventListener('keydown', e => {
+                if (e.key === "Backspace") {
+                    map.entities.splice(map.entities.length - 1, map.entities.length);
+                }
+                if (e.key === "Delete") {
+                    map.spawnPoints.splice(map.spawnPoints.length - 1, map.spawnPoints.length);
+                }
+                if (e.code === "KeyF") {
+                    fPressed = true;
+                }
+                if (e.code === "KeyS") {
+                    let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(map));
+                    let dlAnchorElem = document.getElementById('downloadAnchorElem');
+                    dlAnchorElem.setAttribute("href",     dataStr     );
+                    dlAnchorElem.setAttribute("download", "map.json");
+                    dlAnchorElem.click();
+                }
+                if (e.code === "KeyC") {
+                    cPressed = true;
+                }
+
+            });
+            document.addEventListener('keyup', e => {
+                if (e.code === "KeyF") {
+                    fPressed = false;
+                }
+                if (e.code === "KeyC") {
+                    cPressed = false;
+                    processSpawnPoint.x = mouseX;
+                    processSpawnPoint.y = mouseY;
+                    map.spawnPoints.push(processSpawnPoint);
+                    processSpawnPoint = {
+                        x: 0,
+                        y: 0
+                    }
+                }
+            });
+
+            let draw = () => {
+                ctx.fillStyle = 'black';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'yellow';
+                if(processEntity !== {}) {
+                    ctx.fillRect(processEntity.x, processEntity.y, processEntity.width, processEntity.height);
+                }
+                for(entity of map.entities) {
+                    ctx.fillRect(entity.x, entity.y, entity.width, entity.height);
+                }
+                for(spawnPoint of map.spawnPoints) {
+                    ctx.fillStyle = 'green';
+                    ctx.text = '100px arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('spawn', spawnPoint.x, spawnPoint.y);
+                }
+                if(cPressed) {
+                    ctx.fillStyle = 'green';
+                    ctx.text = '100px arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('spawn', mouseX, mouseY);
+                }
+                
+            };
+            setInterval(draw, 5);
+        </script>
+    </body>
+</html>
